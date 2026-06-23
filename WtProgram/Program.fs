@@ -95,8 +95,17 @@ type Program() as this =
             let processPath = os.windowFromHwnd(hwnd).pid.processPath
             launcher.launch(group, List2([(processPath, None)]))
 
+    let closeTab (group:IGroup) =
+        let foregroundHwnd = os.foreground.hwnd
+        let hwnd =
+            if group.windows.contains((=) foregroundHwnd) then Some(foregroundHwnd)
+            else group.windows.tryHead
+        hwnd.iter <| fun hwnd ->
+            os.windowFromHwnd(hwnd).close()
+
     let hotKeyInfo = Map2(List2([
         ("newTab", (852, openNewTab))
+        ("closeTab", (855, closeTab))
         ("prevTab", (3621, fun (g:IGroup) -> g.switchWindow(false, false)))
         ("nextTab", (3623, fun g -> g.switchWindow(true, false)))
         ]))

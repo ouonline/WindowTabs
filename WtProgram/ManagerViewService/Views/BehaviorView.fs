@@ -73,6 +73,7 @@ type HotKeyView() =
     let switchTabs =
         let hotKeys = List2([
             ("newTab", "newTab")
+            ("closeTab", "closeTab")
             ("nextTab", "nextTab")
             ("prevTab", "prevTab")
         ])

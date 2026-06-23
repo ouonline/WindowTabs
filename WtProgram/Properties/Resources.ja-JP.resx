@@ -141,6 +141,9 @@
   <data name="CloseWindowTabs" xml:space="preserve">
     <value>終了</value>
   </data>
+  <data name="closeTab" xml:space="preserve">
+    <value>タブを閉じる</value>
+  </data>
   <data name="combineIconsInTaskbar" xml:space="preserve">
     <value>タスクバーのアイコンをまとめる</value>
   </data>
