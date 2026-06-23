@@ -60,6 +60,11 @@ Tested on Win10 with Visual Studio 2019 or 2022.
 
     If you choose the `Release` configuration and click `Start`, you will get a release version `WindowTabs\WtProgram\bin\Release\WindowTabs.exe`.
 
+- Compile with VS2022 in command line(Optional):
+   * call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\vc\Auxiliary\Build\vcvarsall.bat" x64
+   * cd path\to\WindowTabs
+   * msbuild WindowTabs.sln /p:Configuration=Release /p:Platform="Any CPU"
+
 - Debug
 
     Choose the `Debug` configuration and it will compile to `WindowTabs\WtProgram\bin\Debug\WindowTabs.exe`.
@@ -79,6 +84,12 @@ Tips
 - GUI framework: WinForms
 
 ## Changes
+
+2026
+
+- use `alt+1`, `alt+2`, ... to switch tabs
+- use `ctrl+shift+t` to create a new tab
+- use `ctrl+shift+w` to close a tab
 
 2025
 
