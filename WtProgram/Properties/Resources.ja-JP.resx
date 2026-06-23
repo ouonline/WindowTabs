@@ -207,6 +207,9 @@
   <data name="New" xml:space="preserve">
     <value>新規</value>
   </data>
+  <data name="newTab" xml:space="preserve">
+    <value>新規タブ</value>
+  </data>
   <data name="nextTab" xml:space="preserve">
     <value>次のタブ</value>
   </data>

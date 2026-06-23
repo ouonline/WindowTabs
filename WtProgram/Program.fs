@@ -86,8 +86,17 @@ type Program() as this =
             | ShellEvent.HSHELL_WINDOWDESTROYED -> this.receive(ShellEvent(hwnd, shellEvent))
             | _ -> ()
 
+    let openNewTab (group:IGroup) =
+        let foregroundHwnd = os.foreground.hwnd
+        let hwnd =
+            if group.windows.contains((=) foregroundHwnd) then Some(foregroundHwnd)
+            else group.windows.tryHead
+        hwnd.iter <| fun hwnd ->
+            let processPath = os.windowFromHwnd(hwnd).pid.processPath
+            launcher.launch(group, List2([(processPath, None)]))
 
     let hotKeyInfo = Map2(List2([
+        ("newTab", (852, openNewTab))
         ("prevTab", (3621, fun (g:IGroup) -> g.switchWindow(false, false)))
         ("nextTab", (3623, fun g -> g.switchWindow(true, false)))
         ]))
