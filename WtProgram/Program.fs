@@ -44,7 +44,7 @@ type ProgramVersion(parts:List2<int>)=
         this.compare(v2) > 0
 
 type Program() as this =
-    let version = "2026.06.23 by ouonline"
+    let version = "2026.06.30 by ouonline"
     let isStandAlone = System.Diagnostics.Debugger.IsAttached 
 
     let mutex = new Mutex(false, "BemoSoftware.WindowTabs")
@@ -69,6 +69,7 @@ type Program() as this =
     let isSubscribed = Cell.create(Map2<IntPtr,IDisposable>())
     let isDroppedAndAwaitingGrouping = Cell.create(Set2())
     let windowNameOverride = Cell.create(Map2())
+    let hotKeysRegistered = Cell.create(false)
     let notifyNewVersionEvt = Event<_>()
     let launcher = Launcher()
    
@@ -114,7 +115,9 @@ type Program() as this =
 
     do
         Desktop(this :> IDesktopNotification).ignore
-        this.registerHotKeys()
+        keepAlive (os.setSingleWinEvent WinEvent.EVENT_SYSTEM_FOREGROUND <| fun _ ->
+            invoker.asyncInvoke <| fun() -> this.updateHotKeyRegistration())
+        this.updateHotKeyRegistration()
         this.updateTaskSwitcher(Services.settings.getValue("replaceAltTab"))
         Services.settings.notifyValue "runAtStartup" this.updateRunAtStartup
         Services.settings.notifyValue "replaceAltTab" this.updateTaskSwitcher
@@ -173,6 +176,7 @@ type Program() as this =
             this.removeUntabableWindows()
 
         this.exitIfNeeded()
+        this.updateHotKeyRegistration()
 
     member this.ensureWindowIsSubscribed(window:Window) =
         let hwnd = window.hwnd
@@ -267,14 +271,31 @@ type Program() as this =
 
     member this.foregroundGroup = this.desktop.foregroundGroup
 
-    member this.registerHotKeys() =
-        hotKeyInfo.items.iter <| fun(key,(_,f)) ->
-            let f() =
-                this.foregroundGroup.iter <| fun group -> 
-                    f(group)
-            let shortcut = this.cast<IProgram>().getHotKey(key)
-            let shortcut = HotKeyShortcut(HotKeyControlCode=int16(shortcut))
-            hotKeyManager.register key (shortcut.RegisterHotKeyModifierFlags, shortcut.RegisterHotKeyVirtualKeyCode) f |> ignore
+    member this.isForegroundTabsEnabled =
+        match this.foregroundGroup with
+        | Some(_) ->
+            let foregroundWindow = os.foreground
+            Services.filter.getIsTabbingEnabledForProcess(foregroundWindow.pid.processPath)
+        | None ->
+            false
+
+    member this.setHotKeysRegistered registered =
+        if registered then
+            hotKeyInfo.items.iter <| fun(key,(_,f)) ->
+                let f() =
+                    this.foregroundGroup.iter <| fun group -> 
+                        f(group)
+                let shortcut = this.cast<IProgram>().getHotKey(key)
+                let shortcut = HotKeyShortcut(HotKeyControlCode=int16(shortcut))
+                hotKeyManager.register key (shortcut.RegisterHotKeyModifierFlags, shortcut.RegisterHotKeyVirtualKeyCode) f |> ignore
+        else
+            hotKeyInfo.items.iter <| fun(key,_) -> hotKeyManager.unregister key
+        hotKeysRegistered.set(registered)
+
+    member this.updateHotKeyRegistration() =
+        let shouldRegister = this.isForegroundTabsEnabled
+        if shouldRegister <> hotKeysRegistered.value then
+            this.setHotKeysRegistered shouldRegister
 
    
     member this.hwndZorders() : Map2<IntPtr, int>= Map2(os.windowsInZorder.enumerate.map(fun(i,w) -> w.hwnd,i))
@@ -355,7 +376,10 @@ type Program() as this =
             hotKeys.setInt32(key, value)
             settings.setObject("hotKeys", hotKeys)
             settingsManager.settingsJson <- settings
-            this.registerHotKeys()
+            if hotKeysRegistered.value then
+                this.setHotKeysRegistered true
+            else
+                this.updateHotKeyRegistration()
 
         member x.ping() = 
             ()

@@ -90,6 +90,7 @@ Tips
 - use `alt+1`, `alt+2`, ... to switch tabs
 - use `ctrl+shift+t` to create a new tab
 - use `ctrl+shift+w` to close a tab
+- do not capture hot keys of no-grouping windows
 
 2025
 

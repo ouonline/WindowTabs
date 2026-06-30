@@ -38,7 +38,7 @@ type InputManagerPlugin(msgSet:Set2<Int32>) as this =
     member this.registerMouseLLHook() =
         WinUserApi.SetWindowsHookEx(WindowHookTypes.WH_MOUSE_LL, hookProcDelegate, IntPtr.Zero, 0).ignore
 
-    member this.tryHandleNumericTabHotKey(key:IntPtr, data:KBDLLHOOKSTRUCT) =
+    member this.tryHandleNumericTabHotKey(group:IGroup, key:IntPtr, data:KBDLLHOOKSTRUCT) =
         let msg = int(key)
         let vkCode = data.vkCode
         let isKeyDown =
@@ -50,27 +50,30 @@ type InputManagerPlugin(msgSet:Set2<Int32>) as this =
             (data.flags &&& LlKeyboardHookFlags.LLKHF_UP) <> 0
         let isAltDown = (data.flags &&& LlKeyboardHookFlags.LLKHF_ALTDOWN) <> 0
 
-        match this.vkToTabIndex(vkCode), this.foregroundGroup with
-        | Some(index), Some(group) when this.enableAltNumberHotKey && isKeyDown && isAltDown && isKeyUp.not ->
+        match this.vkToTabIndex(vkCode) with
+        | Some(index) when this.enableAltNumberHotKey && isKeyDown && isAltDown && isKeyUp.not ->
             handledNumericTabKeys.Add(vkCode).ignore
             let groupInfo = group.cast<GroupInfo>()
             groupInfo.invokeGroup <| fun() ->
                 groupInfo.group.activateIndex(index, true)
             true
-        | Some(_), _ when isKeyUp && handledNumericTabKeys.Remove(vkCode) ->
+        | Some(_) when isKeyUp && handledNumericTabKeys.Remove(vkCode) ->
             true
         | _ ->
             false
 
     member this.registerKeyboardLLHook() =
         kbHook <- OS.registerKeyboardLLHook <| fun(key, data) ->
-            if this.tryHandleNumericTabHotKey(key, data) then
-                Some(1)
-            else
-                this.foregroundGroup.iter <| fun group ->
+            match this.foregroundGroup with
+            | Some(group) when Services.filter.getIsTabbingEnabledForProcess(OS.foreground.pid.processPath) ->
+                if this.tryHandleNumericTabHotKey(group, key, data) then
+                    Some(1)
+                else
                     let groupInfo = group.cast<GroupInfo>()
                     groupInfo.invokeGroup <| fun() ->
                         groupInfo.group.postKeyboardLL(int(key), data)
+                    None
+            | _ ->
                 None
 
     interface IPlugin with
